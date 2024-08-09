@@ -12,9 +12,17 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+import CanMsgSender, CanMsgReceiver
+import can
+
 
 class Ui_MainWindow(object):
+    
     def setupUi(self, MainWindow):
+
+        self.ch1bus = None
+        self.ch2bus = None 
+
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(800, 600)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -82,22 +90,76 @@ class Ui_MainWindow(object):
         current_style = self.connect.styleSheet()
         
         if "red" in current_style:
-            # 현재 빨간색이라면 녹색으로 변경
-            self.connect.setStyleSheet("QPushButton {\n"
-                                       "    background-color: green;\n"
-                                       "    color: white;\n"
-                                       "    border: 2px solid black;\n"
-                                       "    border-radius: 50px;\n"
-                                       "}\n")
+            try:
+                
+                # 현재 빨간색이라면 녹색으로 변경
+                self.open_bus()
+                self.connect.setStyleSheet("QPushButton {\n"
+                                           "    background-color: green;\n"
+                                           "    color: white;\n"
+                                           "    border: 2px solid black;\n"
+                                           "    border-radius: 50px;\n"
+                                           "}\n")
+            except Exception as e:
+                self.recv_text_edit.append(f"Connection failed: {e}")
         else:
             # 현재 녹색이라면 빨간색으로 변경
+            
+            self.close_bus()
             self.connect.setStyleSheet("QPushButton {\n"
-                                       "    background-color: red;\n"
-                                       "    color: white;\n"
-                                       "    border: 2px solid black;\n"
-                                       "    border-radius: 50px;\n"
-                                       "}\n")
+                                    "background-color: red;\n"
+                                    "color: white;\n"
+                                    "border: 2px solid black;\n"
+                                    "border-radius: 50px;\n"
+                                   "}\n")
+    def open_bus(self):
+
+        if not self.ch1bus:
+            try:
+                self.ch1bus = can.interface.Bus(interface='vector', channel=0, bitrate=500000, fd=True, app_name=None,
+                                                data_bitrate=2000000, sjw_abr=32,
+                                                tseg1_abr=127, tseg2_abr=32, sam_abr=1, sjw_dbr=10, tseg1_dbr=29,
+                                                tseg2_dbr=10, output_mode=1)
+            except Exception as e:
+                self.recv_text_edit.append(f"connection failed: {e}")
+        
+        if not self.ch2bus:
+            try:
+                self.ch2bus = can.interface.Bus(interface='vector', channel=1, bitrate=500000, fd=True, app_name=None,
+                                                data_bitrate=1000000, sjw_abr=32,
+                                                tseg1_abr=127, tseg2_abr=32, sam_abr=1, sjw_dbr=10, tseg1_dbr=29,
+                                                tseg2_dbr=10, output_mode=1)
+            except Exception as e:
+                self.recv_text_edit.append(f"connection failed: {e}")
+
+        self.recv_text_edit.append(f"Bus connected.")
+
+    def close_bus(self):
+        if self.ch1bus:
+            try:
+                self.ch1bus.shutdown()
+                self.ch1bus = None
+            except Exception as e:
+                self.recv_text_edit.append(f"Disconnection failed: {e}")
+        if self.ch2bus:
+            try:
+                self.ch2bus.shutdown()
+                self.ch2bus = None
+            except Exception as e:
+                self.recv_text_edit.append(f"Disconnection failed: {e}")
+        
+        self.recv_text_edit.append("Bus disconnected.")
     
+    
+    def __del__(self):
+        if self.ch1bus:
+            self.ch1bus.shutdown()
+        if self.ch2bus:
+            self.ch2bus.shutdown()
+
+
+        
+        
 
 
 
